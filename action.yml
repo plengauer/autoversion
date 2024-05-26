@@ -31,8 +31,8 @@ runs:
           echo "found $version_file" >&2
           directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
-            if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -q '^'"$version_file"'$'; then break; fi
-            if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -q '^'"$directory"; then continue; fi
+            if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"$version_file"'$'; then break; fi
+            if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"$directory"; then continue; fi
             echo "$commit_id"
           done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | grep -vE '^$' | xargs ai | sort -u -r | while read -r change_type; do
             case "$version_file" in
