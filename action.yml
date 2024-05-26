@@ -12,4 +12,55 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - run: exit 0
+    - name: "Install dependencies"
+      env:
+        OPENAI_TOKEN: ${{ inputs.openai_token }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y debconf-utils wget jq
+        echo openai openai/OPENAI_API_TOKEN string "$OPENAI_TOKEN" | sudo debconf-set-selections
+        wget -O - https://raw.githubusercontent.com/plengauer/openai/main/INSTALL.sh | sh
+    - name: "Checkout"
+      uses: actions/checkout@v4
+      with:
+        token: ${{ inputs.github_token }}
+    - name: "Search and bump versions"
+      run: |
+        export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, or patch, nothing else.
+        find . | grep -E '/VERSION$' | while read -r version_file; do
+          echo "found $version_file" >&2
+          directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"
+          git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
+            if git diff-tree --no-commit-id --name-only -r d646397 | grep -q '^'"$version_file"'$'; then break; fi
+            if ! git diff-tree --no-commit-id --name-only -r d646397 | grep -q '^'"$directory"; then continue; fi
+            echo "$commit_id"
+          done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | grep -vE '^$' | xargs ai | sort -u -r | while read -r change_type; do
+            case "$version_file" in
+              */VERSION) version_string="$(cat "$versioN_file")";;
+              */package.json) version_string="$(cat "$versioN_file" | jq -r .version)";;
+              *) echo "Here be dragons! (version file $version_file)"; exit 1;;
+            esac
+            major="$(echo "$version_string" | cut -d . -f 1)"
+            minor="$(echo "$version_string" | cut -d . -f 2)"
+            patch="$(echo "$version_string" | cut -d . -f 3)"
+            if [ "$major.$minor.$patch" != "$version_string" ]; then echo "Version format not supported!" >&2; exit 1; fi
+            case "$change_type" in
+              major) major="$((major + 1))"; minor=0; patch=0;;
+              minor) minor="$((minor + 1))"; patch=0;;
+              patch) patch="$((patch + 1))";;
+              *) echo "Here be dragons! (change type $change_type)" >&2; exit 1;;
+            esac
+            version_string="$major.$minor.$patch"
+            case "$version_file" in
+              */VERSION) echo -n "$version_string" > "$version_file";;
+              */package.json) jq --arg version "$version_string" '.version = $version' "$version_file" > tmp.$$.json && mv tmp.$$.json "$version_file" && rm tmp.$$.json;;
+              *) echo "Here be dragons! (version file $version_file)" >&2; exit 1;;
+            esac
+          done
+        done
+    - name: "Commit back"
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+         branch: autorelease
+         create-branch: true
+    # TODO open PR
