@@ -9,5 +9,6 @@
   "automerge": true,
   "automergeType": "pr",
   "assignAutomerge": true,
-  "ignoreTests": true
+  "ignoreTests": true,
+  "reviewers": ["plengauer"]
 }
