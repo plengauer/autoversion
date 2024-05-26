@@ -1,5 +1,5 @@
-name: 'autorelease'
-description: 'autorelease new versions'
+name: 'autoversionbump'
+description: 'automatically bump versions'
 inputs:
   github_token:
     description: 'API Token for Github'
