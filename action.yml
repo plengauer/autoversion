@@ -1,0 +1,8 @@
+name: 'autorelease'
+description: 'autorelease new versions'
+inputs:
+outputs:
+runs:
+  using: "composite"
+  steps:
+    - run: exit 1
