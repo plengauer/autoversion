@@ -39,6 +39,7 @@ runs:
           done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | grep -vE '^$' | xargs -r ai | sort -u -r | while read -r change_type; do
             case "$version_file_name" in
               VERSION) version_string="$(cat "$version_file")";;
+              DEBIAN/control) version_string="$(cat "$version_file" | grep -E '^Version: ' | cut -d ' ' -f 2-)";;
               package.json) version_string="$(cat "$version_file" | jq -r .version)";;
               *) echo "Here be dragons! (version file $version_file)"; exit 1;;
             esac
@@ -55,6 +56,7 @@ runs:
             version_string="$major.$minor.$patch"
             case "$version_file_name" in
               VERSION) echo -n "$version_string" > "$version_file";;
+              DEBIAN/control) sed -i "s/^Version: .*/Version: $version_string/" "$version_file";;
               package.json) jq --arg version "$version_string" '.version = $version' "$version_file" > tmp.$$.json && mv tmp.$$.json "$version_file" && rm tmp.$$.json;;
               *) echo "Here be dragons! (version file $version_file)" >&2; exit 1;;
             esac
