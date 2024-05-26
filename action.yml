@@ -1,4 +1,4 @@
-name: 'autoversionbump'
+name: 'autoversion'
 description: 'automatically bump versions'
 inputs:
   github_token:
