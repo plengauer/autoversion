@@ -1,1 +1,1 @@
-A github action to automatically release new versions of your software.
+A Github action to automatically release new versions of your software.
