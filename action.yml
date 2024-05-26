@@ -58,13 +58,20 @@ runs:
             esac
           done
         done
-    - name: "Commit and Push"
-      uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-         create-branch: true
-         branch: autorelease
-         commit_message: "Bump version"
     - name: "Open Pull Request"
+      id: open-pr
       uses: peter-evans/create-pull-request@v6
       with:
-        
+        token: ${{ inputs.github_token }}
+        commit-message: "Bump Version"
+        branch: "versionbump"
+        title: "Automatic Version Bump"
+        body: |
+          Bump version(s) to trigger release.
+          (this PR is automatically generated)
+        delete-branch: true
+    - uses: peter-evans/enable-pull-request-automerge@v3
+      with:
+        token: ${{ inputs.github_token }}
+        pull-request-number: ${{ steps.open-pr.outputs.pull-request-number }}
+        merge-method: squash
