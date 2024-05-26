@@ -9,7 +9,8 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
     steps:
       - run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
         id: version
