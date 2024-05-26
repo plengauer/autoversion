@@ -28,16 +28,18 @@ runs:
       run: |
         export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, or patch, nothing else."
         find . | grep -E '/VERSION$' | while read -r version_file; do
+          version_file="${version_file#./}"
+          version_file_name="$(echo "$version_file" | rev | cut -sd / -f 1 | rev)"
           echo "found $version_file" >&2
-          directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"
+          directory="$(echo "$version_file" | rev | cut -sd '/' -f 2- | rev)"
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
-            if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"$version_file"'$'; then break; fi
+            if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "$version_file"; then break; fi
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"$directory"; then continue; fi
             echo "$commit_id"
-          done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | grep -vE '^$' | xargs ai | sort -u -r | while read -r change_type; do
-            case "$version_file" in
-              */VERSION) version_string="$(cat "$versioN_file")";;
-              */package.json) version_string="$(cat "$versioN_file" | jq -r .version)";;
+          done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | grep -vE '^$' | xargs -r ai | sort -u -r | while read -r change_type; do
+            case "$version_file_name" in
+              VERSION) version_string="$(cat "$version_file")";;
+              package.json) version_string="$(cat "$version_file" | jq -r .version)";;
               *) echo "Here be dragons! (version file $version_file)"; exit 1;;
             esac
             major="$(echo "$version_string" | cut -d . -f 1)"
@@ -51,9 +53,9 @@ runs:
               *) echo "Here be dragons! (change type $change_type)" >&2; exit 1;;
             esac
             version_string="$major.$minor.$patch"
-            case "$version_file" in
-              */VERSION) echo -n "$version_string" > "$version_file";;
-              */package.json) jq --arg version "$version_string" '.version = $version' "$version_file" > tmp.$$.json && mv tmp.$$.json "$version_file" && rm tmp.$$.json;;
+            case "$version_file_name" in
+              VERSION) echo -n "$version_string" > "$version_file";;
+              package.json) jq --arg version "$version_string" '.version = $version' "$version_file" > tmp.$$.json && mv tmp.$$.json "$version_file" && rm tmp.$$.json;;
               *) echo "Here be dragons! (version file $version_file)" >&2; exit 1;;
             esac
           done
