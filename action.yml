@@ -12,4 +12,4 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - run: exit 1
+    - run: exit 0
