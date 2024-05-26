@@ -5,7 +5,7 @@ on:
     - cron: '0 0 * * 0'
 
 jobs:
-  bump:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
