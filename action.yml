@@ -43,6 +43,7 @@ runs:
               package.json) version_string="$(cat "$version_file" | jq -r .version)";;
               *) echo "Here be dragons! (version file $version_file)"; exit 1;;
             esac
+            if [ -z "$version_string" ]; then break; fi
             major="$(echo "$version_string" | cut -d . -f 1)"
             minor="$(echo "$version_string" | cut -d . -f 2)"
             patch="$(echo "$version_string" | cut -d . -f 3)"
