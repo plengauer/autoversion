@@ -7,10 +7,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: plengauer/autorelease@v0.1.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.MY_GITHUB_TOKEN }}
           openai_token: ${{ secrets.OPENAI_TOKEN }}
