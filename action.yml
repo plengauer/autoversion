@@ -67,7 +67,7 @@ runs:
         branch: "versionbump"
         title: "Automatic Version Bump"
         body: |
-          Bump version(s) to trigger release.
+          This PR bumps version(s) to trigger a release.
           (this PR is automatically generated)
         delete-branch: true
     - uses: peter-evans/enable-pull-request-automerge@v3
