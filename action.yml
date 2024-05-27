@@ -7,7 +7,6 @@ inputs:
   openai_token:
     description: 'API Token for OpenAI'
     required: true
-outputs:
 runs:
   using: "composite"
   steps:
