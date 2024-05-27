@@ -41,6 +41,8 @@ runs:
               VERSION) version_string="$(cat "$version_file")";;
               DEBIAN/control) version_string="$(cat "$version_file" | grep -E '^Version: ' | cut -d ' ' -f 2-)";;
               package.json) version_string="$(cat "$version_file" | jq -r .version)";;
+              *.gemspec) version_string="$(cat "$version_file" | grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"')"
+              *.toml) version_string="$(cat "$version_file" | grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"')"
               *) echo "Here be dragons! (version file $version_file)"; exit 1;;
             esac
             if [ -z "$version_string" ]; then break; fi
@@ -54,11 +56,13 @@ runs:
               patch) patch="$((patch + 1))";;
               *) echo "Here be dragons! (change type $change_type)" >&2; exit 1;;
             esac
-            version_string="$major.$minor.$patch"
+            version_string_new="$major.$minor.$patch"
             case "$version_file_name" in
-              VERSION) echo -n "$version_string" > "$version_file";;
-              DEBIAN/control) sed -i "s/^Version: .*/Version: $version_string/" "$version_file";;
+              VERSION) echo -n "$version_string_new" > "$version_file";;
+              DEBIAN/control) sed -i "s/^Version: .*/Version: $version_string_new/" "$version_file";;
               package.json) jq --arg version "$version_string" '.version = $version' "$version_file" > tmp.$$.json && mv tmp.$$.json "$version_file" && rm tmp.$$.json;;
+              *.gemspec) sed -i "s/$version_string/$version_string_new/g" "$version_file";;
+              *.toml) sed -i "s/$version_string/$version_string_new/g" "$version_file";;
               *) echo "Here be dragons! (version file $version_file)" >&2; exit 1;;
             esac
           done
