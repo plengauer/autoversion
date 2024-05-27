@@ -9,7 +9,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: plengauer/autoversion@v0.4.0
+      - uses: plengauer/autoversion@main
         with:
           github_token: ${{ secrets.MY_GITHUB_TOKEN }}
           openai_token: ${{ secrets.OPENAI_TOKEN }}
