@@ -6,8 +6,7 @@ inputs:
     required: true
   openai_token:
     description: 'API Token for OpenAI'
-    required: false
-    default: ''
+    required: true
 outputs:
 runs:
   using: "composite"
