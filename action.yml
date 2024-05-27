@@ -26,6 +26,10 @@ runs:
         token: ${{ inputs.github_token }}
     - name: "Search and Bump Versions"
       run: |
+        # TODO match on all file types
+        # TODO check whether package.json actually has version property
+        # TODO check not just file touched but actually version changed
+        # TODO handle patterns in subdir like DEBIAN/control
         export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, or patch, nothing else."
         find . | grep -E '/VERSION$' | while read -r version_file; do
           version_file="${version_file#./}"
