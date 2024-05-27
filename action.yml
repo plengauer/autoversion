@@ -14,6 +14,7 @@ runs:
     - name: "Install Dependencies"
       env:
         OPENAI_TOKEN: ${{ inputs.openai_token }}
+      shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y debconf-utils wget jq
@@ -24,6 +25,7 @@ runs:
       with:
         token: ${{ inputs.github_token }}
     - name: "Search and Bump Versions"
+      shell: bash
       run: |
         list_version_files() {
           find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$'
