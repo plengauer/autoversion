@@ -26,6 +26,10 @@ runs:
         token: ${{ inputs.github_token }}
     - name: "Search and Bump Versions"
       run: |
+        list_version_files() {
+          find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$'
+        }
+        
         read_version() {
           local version_file="$1"
           case "$version_file" in
@@ -37,7 +41,7 @@ runs:
             *) echo "Here be dragons! (version file $version_file)" >&2; return 1;;
           esac
         }
-
+        
         write_version() {
           local version_file="$1"
           local version_string="$2"
@@ -48,12 +52,28 @@ runs:
             */package.json) jq --arg version "$version_string" '.version = $version' "$version_file" > tmp.$$.json && mv tmp.$$.json "$version_file" && rm tmp.$$.json;;
             *.gemspec) sed -i "s/$version_string/$version_string_new/g" "$version_file";;
             *.toml) sed -i "s/$version_string/$version_string_new/g" "$version_file";;
-            *) echo "Here be dragons! (version file $version_file)" >&2; exit 1;;
+            *) echo "Here be dragons! (version file $version_file)" >&2; return 1;;
           esac
+        }
+
+        increment_version() {
+          local version_string="$1"
+          local change_type="$2"
+          major="$(echo "$version_string" | cut -d . -f 1)"
+          minor="$(echo "$version_string" | cut -d . -f 2)"
+          patch="$(echo "$version_string" | cut -d . -f 3)"
+          if [ "$major.$minor.$patch" != "$version_string" ]; then echo "Version format not supported! ($version_string)" >&2; exit 1; fi
+          case "$change_type" in
+            major) major="$((major + 1))"; minor=0; patch=0;;
+            minor) minor="$((minor + 1))"; patch=0;;
+            patch) patch="$((patch + 1))";;
+            *) echo "Here be dragons! (change type $change_type)" >&2; return 1;;
+          esac
+          echo "$major.$minor.$patch"
         }
         
         export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, or patch, nothing else."
-        find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$' | while read -r version_file; do
+        list_version_files | while read -r version_file; do
           directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"
           case "$version_file" in
             */DEBIAN/control) directory="$(echo "$directory" | rev | cut -d '/' -f 2- | rev)";;
@@ -67,17 +87,8 @@ runs:
           done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | grep -vE '^$' | xargs -r ai | sort -u -r | while read -r change_type; do
             version_string="$(read_version "$version_file")"
             if [ -z "$version_string" ]; then break; fi
-            major="$(echo "$version_string" | cut -d . -f 1)"
-            minor="$(echo "$version_string" | cut -d . -f 2)"
-            patch="$(echo "$version_string" | cut -d . -f 3)"
-            if [ "$major.$minor.$patch" != "$version_string" ]; then echo "Version format not supported! ($version_string)" >&2; exit 1; fi
-            case "$change_type" in
-              major) major="$((major + 1))"; minor=0; patch=0;;
-              minor) minor="$((minor + 1))"; patch=0;;
-              patch) patch="$((patch + 1))";;
-              *) echo "Here be dragons! (change type $change_type)" >&2; exit 1;;
-            esac
-            write_version "$version_file" "$version_string" "$major.$minor.$patch"
+            version_string_new="$(increment_version "$version_string" "$change_type")"
+            write_version "$version_file" "$version_string" "$version_string_new"
           done
         done
     - name: "Open Pull Request"
