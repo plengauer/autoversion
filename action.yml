@@ -31,8 +31,8 @@ runs:
           directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"
           case "$version_file" in
             */DEBIAN/control) directory="$(echo "$directory" | rev | cut -d '/' -f 2- | rev)";;
+            */package.json) if ! jq '.version' "$version_file" &> /dev/null; then continue; fi
           esac
-          # TODO check whether package.json actually has version property, if not, skip
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}"; then break; fi
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
