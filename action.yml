@@ -43,8 +43,8 @@ runs:
               */VERSION) version_string="$(cat "$version_file")";;
               */DEBIAN/control) version_string="$(cat "$version_file" | grep -E '^Version: ' | cut -d ' ' -f 2-)";;
               */package.json) version_string="$(cat "$version_file" | jq -r .version)";;
-              *.gemspec) version_string="$(cat "$version_file" | grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"')"
-              *.toml) version_string="$(cat "$version_file" | grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"')"
+              *.gemspec) version_string="$(cat "$version_file" | grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"')";;
+              *.toml) version_string="$(cat "$version_file" | grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"')";;
               *) echo "Here be dragons! (version file $version_file)"; exit 1;;
             esac
             if [ -z "$version_string" ]; then break; fi
