@@ -106,6 +106,7 @@ runs:
           (this PR is automatically generated)
         delete-branch: true
     - uses: peter-evans/enable-pull-request-automerge@v3
+      if: steps.open-pr.outputs.pull-request-number != null
       with:
         token: ${{ inputs.github_token }}
         pull-request-number: ${{ steps.open-pr.outputs.pull-request-number }}
