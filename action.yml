@@ -72,7 +72,6 @@ runs:
           echo "$major.$minor.$patch"
         }
 
-        set +e
         export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, or patch, nothing else."
         list_version_files | while read -r version_file; do
           echo "processing $version_file ..." >&2
@@ -86,7 +85,7 @@ runs:
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}"; then echo "stopping at $commit_id" >&2; break; fi # TODO check not just file touched but actually version changed
             echo "including $commit_id" >&2
             echo "$commit_id"
-          done | while read -r commit_id; do git log -1 --format=%B "$commit_id_2"; done | grep -vE '^$' | xargs -r ai | sort -u -r | while read -r change_type; do
+          done | while read -r commit_id; do git log -1 --format=%B "$commit_id_2"; done | { grep -vE '^$' || true } | xargs -r ai | sort -u -r | while read -r change_type; do
             echo "bumping $change_type version in $version_file" >&2
             version_string="$(read_version "$version_file")"
             if [ -z "$version_string" ]; then break; fi
