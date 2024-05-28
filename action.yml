@@ -113,7 +113,7 @@ runs:
       shell: bash
       run: |
         if ! [ -f .github/renovate.json ]; then exit 0; fi
-        echo "reviewers=$(cat .github/renovate.json | jq -r '.reviewers | join(",")')" > "$GITUB_OUTPUT"
+        echo "reviewers=$(cat .github/renovate.json | jq -r '.reviewers | join(",")')" > "$GITHUB_OUTPUT"
     - name: "Open Pull Request"
       id: open-pr
       uses: peter-evans/create-pull-request@v6
