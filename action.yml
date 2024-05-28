@@ -23,6 +23,7 @@ runs:
       uses: actions/checkout@v4
       with:
         token: ${{ inputs.github_token }}
+        fetch-depth: 0
     - name: "Search and Bump Versions"
       shell: bash
       run: |
@@ -72,7 +73,6 @@ runs:
           echo "$major.$minor.$patch"
         }
 
-        git log --all --oneline >&2
         export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, or patch, nothing else."
         list_version_files | while read -r version_file; do
           echo "processing $version_file ..." >&2
