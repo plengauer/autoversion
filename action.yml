@@ -73,7 +73,6 @@ runs:
         }
 
         export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, or patch, nothing else."
-        git log --oneline >&2
         list_version_files | while read -r version_file; do
           echo "processing $version_file ..." >&2
           directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"
@@ -81,7 +80,7 @@ runs:
             */DEBIAN/control) directory="$(echo "$directory" | rev | cut -d '/' -f 2- | rev)";;
             */package.json) if ! jq '.version' "$version_file" &> /dev/null; then continue; fi
           esac
-          git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
+          git log --all --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then echo "skipping $commit_id" >&2; continue; fi
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}"; then echo "stopping at $commit_id" >&2; break; fi # TODO check not just file touched but actually version changed
             echo "including $commit_id" >&2
