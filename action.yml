@@ -30,6 +30,20 @@ runs:
         list_version_files() {
           find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$'
         }
+
+        is_version_touched() {
+          local version_file="$1"
+          local commit_id="$2"
+          case "$version_file" in
+            */VERSION) return 0;;
+            */DEBIAN/control) git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+Version: ' && return 0 || return 1;;
+            */package.json) git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+' | grep -qE '"version"' && return 0 || return 1;;
+            *.gemspec) git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+' | grep -qE '.version' && return 0 || return 1;;
+            *.toml) git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+' | grep -qE 'version' && return 0 || return 1;;
+            *) echo "Here be dragons! (version file $version_file)" >&2; return 1;;
+          esac
+          return 0
+        }
         
         read_version() {
           local version_file="$1"
@@ -83,7 +97,7 @@ runs:
           esac
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then echo "skipping $commit_id" >&2; continue; fi
-            if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}"; then echo "stopping at $commit_id" >&2; break; fi # TODO check not just file touched but actually version changed
+            if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             echo "including $commit_id" >&2
             echo "$commit_id"
           done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | { grep -vE '^$' || true; } | xargs -r ai | sort -u -r | while read -r change_type; do
