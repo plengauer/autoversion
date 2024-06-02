@@ -100,7 +100,7 @@ runs:
             echo "including $commit_id" >&2
             echo "$commit_id"
           done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | { grep -vE '^$' || true; } | xargs -r -0 ai | sort -u -r | while read -r change_type; do
-            if [ "$change_type" = none ]; continue
+            if [ "$change_type" = none ]; then continue; fi
             echo "bumping $change_type version in $version_file" >&2
             version_string="$(read_version "$version_file")"
             if [ -z "$version_string" ]; then break; fi
