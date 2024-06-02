@@ -93,14 +93,14 @@ runs:
           directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"
           case "$version_file" in
             */DEBIAN/control) directory="$(echo "$directory" | rev | cut -d '/' -f 2- | rev)";;
-            */package.json) if ! jq '.version' "$version_file" &> /dev/null; then continue; fi
+            */package.json) if ! jq '.version' "$version_file" &> /dev/null; then continue; fi;;
           esac
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then echo "skipping $commit_id" >&2; continue; fi
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             echo "including $commit_id" >&2
             echo "$commit_id"
-          done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | { grep -vE '^$' || true; } | xargs -r ai | sort -u -r | while read -r change_type; do
+          done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | { grep -vE '^$' || true; } | xargs -r -0 ai | sort -u -r | while read -r change_type; do
             echo "bumping $change_type version in $version_file" >&2
             version_string="$(read_version "$version_file")"
             if [ -z "$version_string" ]; then break; fi
