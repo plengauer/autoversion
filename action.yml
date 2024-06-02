@@ -34,26 +34,25 @@ runs:
         is_version_touched() {
           local version_file="$1"
           local commit_id="$2"
-          case "$version_file" in
-            */VERSION) return 0;;
-            */DEBIAN/control) git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+Version: ' && return 0 || return 1;;
-            */package.json) git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+' | grep -qE '"version"' && return 0 || return 1;;
-            *.gemspec) git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+' | grep -qE '.version' && return 0 || return 1;;
-            *.toml) git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+' | grep -qE 'version' && return 0 || return 1;;
-            *) echo "Here be dragons! (version file $version_file)" >&2; return 1;;
-          esac
-          return 0
+          git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -qE '^+' | case "$version_file" in
+            */VERSION) echo dirty;;
+            */DEBIAN/control) grep -q 'Version: ' && echo dirty;;
+            */package.json) grep -q '"version":' && echo dirty;;
+            *.gemspec) grep -q '.version' && echo dirty;;
+            *.toml) grep -q 'version' && echo dirty;;
+            *) echo "Here be dragons! (version file $version_file)" >&2;;
+          esac | grep -q dirty
         }
         
         read_version() {
           local version_file="$1"
-          case "$version_file" in
-            */VERSION) cat "$version_file";;
-            */DEBIAN/control) cat "$version_file" | grep -E '^Version: ' | cut -d ' ' -f 2-;;
-            */package.json) cat "$version_file" | jq -r .version;;
-            *.gemspec) cat "$version_file" | grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"';;
-            *.toml) cat "$version_file" | grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"';;
-            *) echo "Here be dragons! (version file $version_file)" >&2; return 1;;
+          cat "$version_file" | case "$version_file" in
+            */VERSION) cat;;
+            */DEBIAN/control) grep -E '^Version: ' | cut -d ' ' -f 2-;;
+            */package.json) jq -r .version;;
+            *.gemspec) grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"';;
+            *.toml) grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"';;
+            *) echo "Here be dragons! (version file $version_file)" >&2; cat;;
           esac
         }
         
