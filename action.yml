@@ -63,7 +63,7 @@ runs:
           case "$version_file" in
             */VERSION) echo -n "$version_string_new" > "$version_file";;
             */DEBIAN/control) sed -i "s/^Version: .*/Version: $version_string_new/" "$version_file";;
-            */package.json) jq --arg version "$version_string" '.version = $version' "$version_file" > tmp.$$.json && mv tmp.$$.json "$version_file" && rm tmp.$$.json;;
+            */package.json) jq --arg version "$version_string" '.version = $version' "$version_file" > tmp.$$.json && mv tmp.$$.json "$version_file";;
             *.gemspec) sed -i "s/$version_string/$version_string_new/g" "$version_file";;
             *.toml) sed -i "s/$version_string/$version_string_new/g" "$version_file";;
             *) echo "Here be dragons! (version file $version_file)" >&2; return 1;;
@@ -95,7 +95,7 @@ runs:
             */package.json) if ! jq '.version' "$version_file" &> /dev/null; then continue; fi;;
           esac
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
-            if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then echo "skipping $commit_id" >&2; continue; fi
+            if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"/; then echo "skipping $commit_id" >&2; continue; fi
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             echo "including $commit_id" >&2
             echo "$commit_id"
