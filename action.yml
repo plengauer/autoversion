@@ -34,7 +34,7 @@ runs:
         is_version_touched() {
           local version_file="$1"
           local commit_id="$2"
-          git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | grep -E '^\+' | case "$version_file" in
+          git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | { grep -E '^\+' || true; } | case "$version_file" in
             */VERSION) echo dirty;;
             */DEBIAN/control) grep -q 'Version: ' && echo dirty;;
             */package.json) grep -q '"version":' && echo dirty;;
