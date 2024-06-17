@@ -101,13 +101,13 @@ runs:
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             echo "including $commit_id" >&2
             echo "$commit_id"
-          done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | { grep -vE '^$' || true; } | xargs -r -0 ai | sort -u -r | while read -r change_type; do
+          done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | grep -vE '^$' | xargs -r -0 ai | sort -u -r | while read -r change_type; do
             if [ "$change_type" = none ]; then continue; fi
             echo "bumping $change_type version in $version_file" >&2
-            version_string="$(read_version "$version_file" || true)"
-            if [ -z "$version_string" ]; then break; fi
-            version_string_new="$(increment_version "$version_string" "$change_type" || true)"
-            if [ -z "$version_string_new" ]; then break; fi
+            version_string="$(read_version "$version_file")"
+            if [ -z "$version_string" ]; then continue; fi
+            version_string_new="$(increment_version "$version_string" "$change_type")"
+            if [ -z "$version_string_new" ]; then continue; fi
             write_version "$version_file" "$version_string" "$version_string_new"
           done
         done
