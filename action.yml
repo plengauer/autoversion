@@ -93,7 +93,7 @@ runs:
           echo "processing $version_file ..." >&2
           directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"/
           case "$version_file" in
-            */DEBIAN/control) directory="$(echo "$directory" | rev | cut -d '/' -f 2- | rev)"/;;
+            */DEBIAN/control) directory="$(echo "$directory" | rev | cut -d '/' -f 3- | rev)"/;;
             */package.json) if ! jq '.version' "$version_file" &> /dev/null; then continue; fi;;
             *) ;;
           esac
