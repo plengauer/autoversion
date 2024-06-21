@@ -94,8 +94,8 @@ runs:
           directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"/
           case "$version_file" in
             */DEBIAN/control) directory="$(echo "$directory" | rev | cut -d '/' -f 3- | rev)"/;;
-            */package.json) if ! jq '.version' "$version_file" 1> /dev/null 2> /dev/null; then continue; fi;;
-            *) ;;
+            */package.json) if jq '.version' "$version_file" | grep -q null; then continue; fi;;
+            *) true;;
           esac
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
