@@ -88,7 +88,6 @@ runs:
           echo "$major.$minor.$patch"
         }
 
-        set -e
         set +o pipefail
         export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, enhancements and optimizations, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. Refactors do not need a version change. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, patch, or none if nothing at all need changing."
         list_version_files | while read -r version_file; do
@@ -107,11 +106,11 @@ runs:
           done | while read -r commit_id; do git log -1 --format=%B "$commit_id"; done | grep -vE '^$' | xargs -r -0 ai | sort -u -r | while read -r change_type; do
             if [ "$change_type" = none ]; then continue; fi
             echo "bumping $change_type version in $version_file" >&2
-            version_string="$(read_version "$version_file")"
+            version_string="$(read_version "$version_file" || true)"
             if [ -z "$version_string" ]; then break; fi
-            version_string_new="$(increment_version "$version_string" "$change_type")"
+            version_string_new="$(increment_version "$version_string" "$change_type" || true)"
             if [ -z "$version_string_new" ]; then break; fi
-            write_version "$version_file" "$version_string" "$version_string_new"
+            write_version "$version_file" "$version_string" "$version_string_new" || true
           done
         done
     - name: "Resolve Reviewers"
