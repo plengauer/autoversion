@@ -113,6 +113,9 @@ runs:
             write_version "$version_file" "$version_string" "$version_string_new" || true
           done
         done
+    - name: Log Changes
+      shell: bash
+      run: git status && git diff
     - name: "Resolve Reviewers"
       id: reviewers
       shell: bash
