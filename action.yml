@@ -27,6 +27,8 @@ runs:
     - name: "Search and Bump Versions"
       shell: bash
       run: |
+        builtin unalias -a # temporarily disable otel
+      
         list_version_files() {
           find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$'
         }
