@@ -115,8 +115,7 @@ runs:
         done
     - name: Log Changes
       shell: bash
-      run: git status
-      run: git diff
+      run: git status && git diff
     - name: "Resolve Reviewers"
       id: reviewers
       shell: bash
