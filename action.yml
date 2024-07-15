@@ -7,6 +7,14 @@ inputs:
   openai_token:
     description: 'API Token for OpenAI'
     required: true
+  path_include:
+    description: 'Consider only changes from this path'
+    required: false
+    default: './'
+  path_exclude:
+    description: 'Exclude all changes from this path'
+    required: false
+    default: '.github/'
 runs:
   using: "composite"
   steps:
@@ -25,6 +33,9 @@ runs:
         token: ${{ inputs.github_token }}
         fetch-depth: 0
     - name: "Search and Bump Versions"
+      env:
+        PATH_INCLUDE: ${{ inputs.path_include }}
+        PATH_EXCLUDE: $ {{ inputs.path_exclude }}
       shell: bash
       run: |
         builtin unalias -a # temporarily disable otel
@@ -100,6 +111,8 @@ runs:
             *) true;;
           esac
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
+            if [ -n "$PATH_INCLUDE" ] && ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"$PATH_INCLUDE"; then continue; fi
+            if [ -n "$PATH_EXCLUDE" ] &&   git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"$PATH_EXCLUDE"; then continue; fi
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             echo "including $commit_id" >&2
