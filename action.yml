@@ -111,8 +111,20 @@ runs:
             *) true;;
           esac
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
-            if [ -n "$PATH_INCLUDE" ] && ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${PATH_INCLUDE#./}"; then continue; fi
-            if [ -n "$PATH_EXCLUDE" ] &&   git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${PATH_EXCLUDE#./}"; then continue; fi
+            if [ -n "$PATH_INCLUDE" ]; then
+              skip=0
+              IFS=: for path_include in $PATH_INCLUDE; do
+                if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${path_include#./}"; then skip=1; fi
+              done
+              if [ "$skip" = 1 ]; then continue; fi
+            fi
+            if [ -n "$PATH_EXCLUDE" ]; then
+              skip=0
+              IFS=: for path_exclude in $PATH_EXCLUDE; do
+                if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${path_exclude#./}"; then skip=1; fi
+              done
+              if [ "$skip" = 1 ]; then continue; fi
+            fi
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             echo "including $commit_id" >&2
