@@ -113,16 +113,20 @@ runs:
           git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
             if [ -n "$PATH_INCLUDE" ]; then
               skip=0
-              IFS=: for path_include in $PATH_INCLUDE; do
+              IFS=:
+              for path_include in $PATH_INCLUDE; do
                 if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${path_include#./}"; then skip=1; fi
               done
+              IFS=' '
               if [ "$skip" = 1 ]; then continue; fi
             fi
             if [ -n "$PATH_EXCLUDE" ]; then
               skip=0
-              IFS=: for path_exclude in $PATH_EXCLUDE; do
+              IFS=:
+              for path_exclude in $PATH_EXCLUDE; do
                 if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${path_exclude#./}"; then skip=1; fi
               done
+              IFS=' '
               if [ "$skip" = 1 ]; then continue; fi
             fi
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
