@@ -35,7 +35,7 @@ runs:
     - name: "Search and Bump Versions"
       env:
         PATH_INCLUDE: ${{ inputs.path_include }}
-        PATH_EXCLUDE: $ {{ inputs.path_exclude }}
+        PATH_EXCLUDE: ${{ inputs.path_exclude }}
       shell: bash
       run: |
         builtin unalias -a # temporarily disable otel
