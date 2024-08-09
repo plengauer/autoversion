@@ -38,8 +38,6 @@ runs:
         PATH_EXCLUDE: ${{ inputs.path_exclude }}
       shell: bash
       run: |
-        builtin unalias -a # temporarily disable otel
-      
         list_version_files() {
           find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$'
         }
