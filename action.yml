@@ -38,6 +38,8 @@ runs:
         PATH_EXCLUDE: ${{ inputs.path_exclude }}
       shell: bash
       run: |
+        unset OTEL_SHELL_EXPERIMENTAL_OBSERVE_PIPES # temporarily disable pipes
+
         list_version_files() {
           find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$'
         }
