@@ -152,7 +152,7 @@ runs:
         echo "reviewers=$(cat .github/renovate.json | jq -r '.reviewers | join(",")')" >> "$GITHUB_OUTPUT"
     - name: "Open Pull Request"
       id: open-pr
-      uses: peter-evans/create-pull-request@v6
+      uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ inputs.github_token }}
         commit-message: "Bump Version"
