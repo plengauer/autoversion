@@ -113,7 +113,7 @@ runs:
                 *bug*) echo patch;;
                 *minor*) echo minor;;
                 *major*) echo major;;
-                *breaking change*) echo major;;
+                *'breaking change'*) echo major;;
                 *dependency*) echo minor;;
                 *update*) echo minor;;
                 *) echo minor;;
