@@ -6,7 +6,7 @@ inputs:
     required: true
   openai_token:
     description: 'API Token for OpenAI'
-    required: true
+    required: false
   path_include:
     description: 'Consider only changes from this path'
     required: false
@@ -23,6 +23,7 @@ runs:
         OPENAI_TOKEN: ${{ inputs.openai_token }}
       shell: bash
       run: |
+        [ -z "$OPENAI_TOKEN" ] && exit 0 || true
         sudo apt-get update
         sudo apt-get install -y debconf-utils wget jq
         echo openai openai/OPENAI_API_TOKEN string "$OPENAI_TOKEN" | sudo debconf-set-selections
@@ -95,6 +96,30 @@ runs:
             *) echo "Here be dragons! (change type $change_type)" >&2; return 1;;
           esac
           echo "$major.$minor.$patch"
+        }
+
+        commits2bumps() {
+          if [ -n "${{ inputs.openai_token }}" ]; then
+            xargs -r -0 -d '\n' -n 1 ai
+          else
+            while read -r commit_message; do
+              case "$(printf '%s' "$commit_message" | tr '[:upper:]' '[:lower:]')" in
+                '[bugfix]'*) echo patch;;
+                '[bug]'*) echo patch;;
+                '[minor]'*) echo minor;;
+                '[major]'*) echo major;;
+                '[breaking]'*) echo major;;
+                '[breaking change]'*) echo major;;
+                *bug*) echo patch;;
+                *minor*) echo minor;;
+                *major*) echo major;;
+                *breaking change*) echo major;;
+                *dependency*) echo minor;;
+                *update*) echo minor;;
+                *) echo minor;;
+              esac
+            done
+          fi
         }
 
         set +e
