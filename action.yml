@@ -34,6 +34,7 @@ runs:
         token: ${{ inputs.github_token }}
         fetch-depth: 0
     - name: "Search and Bump Versions"
+      id: bump
       env:
         PATH_INCLUDE: ${{ inputs.path_include }}
         PATH_EXCLUDE: ${{ inputs.path_exclude }}
@@ -125,6 +126,7 @@ runs:
         set +e
         set +o pipefail
         export AI_SYSTEM_PROMPT="I take input that are commit messages and analyze whether the maximum change is either major, minor or patch. Major changes are for breaking changes, minor for new features, enhancements and optimizations, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. Refactors do not need a version change. If the commit messages hint at more than one type of a change, I respond with the highest one. I only respond with major, minor, patch, or none if nothing at all need changing."
+        commit_messages="$(mktemp)"
         list_version_files | while read -r version_file; do
           echo "processing $version_file ..." >&2
           if [ -z "$(increment_version "$(read_version "$version_file")" patch)" ]; then continue; fi
@@ -157,7 +159,7 @@ runs:
             fi
             echo "including $commit_id" >&2
             echo "$commit_id"
-          done | while read -r commit_id; do git log -1 --format=%B "$commit_id" | tr '\n' ' '; echo; done | grep -vE '^$' | xargs -r -0 -d '\n' -n 1 ai | sort -u -r | while read -r change_type; do
+          done | while read -r commit_id; do git log -1 --format=%B "$commit_id" | tr '\n' ' '; echo; done | grep -vE '^$' | tee "$commit_messages" | xargs -r -0 -d '\n' -n 1 ai | sort -u -r | while read -r change_type; do
             if [ "$change_type" = none ]; then continue; fi
             echo "bumping $change_type version in $version_file" >&2
             version_string="$(read_version "$version_file" || true)"
@@ -167,6 +169,7 @@ runs:
             write_version "$version_file" "$version_string" "$version_string_new" || true
           done
         done
+        echo "commit_messages=$(cat "$commit_messages")" >> "$GITHUB_OUTPUT"
     - name: Log Changes
       shell: bash
       run: git status && git diff
@@ -185,7 +188,8 @@ runs:
         branch: "versionbump"
         title: "Automatic Version Bump"
         body: |
-          This PR bumps version(s) to trigger a release.
+          This PR bumps version(s) to trigger a release. It is based on the following commits:
+          ${{ steps.bump.outputs.commit_messages }}
           (this PR is automatically generated)
         reviewers: ${{ steps.reviewers.outputs.reviewers }}
         delete-branch: true
