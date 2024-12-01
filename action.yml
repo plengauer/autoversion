@@ -159,7 +159,7 @@ runs:
             fi
             echo "including $commit_id" >&2
             echo "$commit_id"
-          done | while read -r commit_id; do git log -1 --format=%B "$commit_id" | tr '\n' ' '; echo; done | grep -vE '^$' | tee "$commit_messages" | xargs -r -0 -d '\n' -n 1 ai | sort -u -r | while read -r change_type; do
+          done | while read -r commit_id; do git log -1 --format=%B "$commit_id" | tr '\n' ' '; echo; done | grep -vE '^$' | tee "$commit_messages" | commits2bumps | sort -u -r | while read -r change_type; do
             if [ "$change_type" = none ]; then continue; fi
             echo "bumping $change_type version in $version_file" >&2
             version_string="$(read_version "$version_file" || true)"
