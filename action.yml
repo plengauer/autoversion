@@ -140,13 +140,13 @@ runs:
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             if [ -n "$PATH_INCLUDE" ]; then
-              skip=0
+              include=0
               IFS=:
               for path_include in $PATH_INCLUDE; do
-                if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${path_include#./}"; then skip=1; fi
+                if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${path_include#./}"; then include=1; fi
               done
               IFS=' '
-              if [ "$skip" = 1 ]; then continue; fi
+              if [ "$include" = 0 ]; then continue; fi
             fi
             if [ -n "$PATH_EXCLUDE" ]; then
               skip=0
