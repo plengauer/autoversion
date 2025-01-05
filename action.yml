@@ -192,6 +192,9 @@ runs:
           (this PR is automatically generated)
         reviewers: ${{ steps.reviewers.outputs.reviewers }}
         delete-branch: true
+    - name: "Delay" # to let the api and PR state catch up ...
+      shell: bash
+      run: sleep 60
     - uses: peter-evans/enable-pull-request-automerge@v3
       if: steps.open-pr.outputs.pull-request-number != null
       with:
