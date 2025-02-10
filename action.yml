@@ -137,7 +137,6 @@ runs:
           $(cat README.md)
         "
         fi
-        export AI_SYSTEM_PROMPT="$AI_SYSTEM_PROMPT
         commit_messages="$(mktemp)"
         list_version_files | while read -r version_file; do
           echo "processing $version_file ..." >&2
