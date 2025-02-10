@@ -131,7 +131,7 @@ runs:
         If the commit messages hint at more than one type of a change, you respond with the highest one. You only respond with major, minor, patch, or none if nothing at all need changing.
 
         The name of the repository is $GITHUB_REPOSITORY."
-        if [ -r README.md]; then
+        if [ -r README.md ]; then
           export AI_SYSTEM_PROMPT="$AI_SYSTEM_PROMPT
           The content of the README.md is:
           $(cat README.md)
