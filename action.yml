@@ -29,7 +29,7 @@ runs:
         echo openai openai/OPENAI_API_TOKEN string "$OPENAI_TOKEN" | sudo debconf-set-selections
         wget -O - https://raw.githubusercontent.com/plengauer/openai/main/INSTALL.sh | sh
     - name: "Checkout"
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.0.0
       with:
         token: ${{ inputs.github_token }}
         fetch-depth: 0
@@ -192,7 +192,7 @@ runs:
         echo "reviewers=$(cat .github/renovate.json | jq '.reviewers // empty' | jq -s | jq -r '.[] | join(",")')" >> "$GITHUB_OUTPUT"
     - name: "Open Pull Request"
       id: open-pr
-      uses: peter-evans/create-pull-request@v7
+      uses: peter-evans/create-pull-request@v7.0.0
       with:
         token: ${{ inputs.github_token }}
         commit-message: "Bump Version"
@@ -206,7 +206,7 @@ runs:
     - name: "Delay" # to let the api and PR state catch up ...
       shell: bash
       run: sleep 60
-    - uses: peter-evans/enable-pull-request-automerge@v3
+    - uses: peter-evans/enable-pull-request-automerge@v3.0.0
       if: steps.open-pr.outputs.pull-request-number != null
       with:
         token: ${{ inputs.github_token }}
