@@ -192,7 +192,7 @@ runs:
         echo "reviewers=$(cat .github/renovate.json | jq '.reviewers // empty' | jq -s | jq -r '.[] | join(",")')" >> "$GITHUB_OUTPUT"
     - name: "Open Pull Request"
       id: open-pr
-      uses: peter-evans/create-pull-request@v7.0.0
+      uses: peter-evans/create-pull-request@v7.0.8
       with:
         token: ${{ inputs.github_token }}
         commit-message: "Bump Version"
