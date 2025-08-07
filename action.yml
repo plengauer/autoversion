@@ -204,10 +204,12 @@ runs:
         reviewers: ${{ steps.reviewers.outputs.reviewers }}
         delete-branch: true
     - name: "Delay" # to let the api and PR state catch up ...
+      if: steps.open-pr.outputs.pull-request-number != null
       shell: bash
       run: sleep 60
-    - uses: peter-evans/enable-pull-request-automerge@v3.0.0
+    - name: "Enable auto-merge"
       if: steps.open-pr.outputs.pull-request-number != null
+      uses: peter-evans/enable-pull-request-automerge@v3.0.0
       with:
         token: ${{ inputs.github_token }}
         pull-request-number: ${{ steps.open-pr.outputs.pull-request-number }}
