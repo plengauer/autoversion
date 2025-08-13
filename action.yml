@@ -29,7 +29,7 @@ runs:
         echo openai openai/OPENAI_API_TOKEN string "$OPENAI_TOKEN" | sudo debconf-set-selections
         wget -O - https://raw.githubusercontent.com/plengauer/openai/main/INSTALL.sh | sh
     - name: "Checkout"
-      uses: actions/checkout@v4.3.0
+      uses: actions/checkout@v5.0.0
       with:
         token: ${{ inputs.github_token }}
         fetch-depth: 0
