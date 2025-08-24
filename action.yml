@@ -128,7 +128,7 @@ runs:
         set +o pipefail
         export AI_SYSTEM_PROMPT="
         You take input that are commit messages and analyze whether the maximum change is either major, minor or patch.
-        Major changes are for breaking changes, minor for new features, enhancements and optimizations, dependency updates, and other new functionality that does not break existing functionality, patch is for bug fixes only. Refactors do not need a version change.
+        Major changes are for breaking changes, minor for new features, enhancements and optimizations, dependency updates that are either major or minor themselves, and other new functionality that does not break existing functionality, patch is for bug fixes and for dependency updates that are patches themselves only. Refactors do not need a version change.
         If the commit messages hint at more than one type of a change, you respond with the highest one. You only respond with major, minor, patch, or none if nothing at all need changing.
 
         The name of the repository is $GITHUB_REPOSITORY."
