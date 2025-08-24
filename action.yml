@@ -32,6 +32,7 @@ runs:
       uses: actions/checkout@v5.0.0
       with:
         token: ${{ inputs.github_token }}
+        ref: main
         fetch-depth: 0
     - name: "Search and Bump Versions"
       id: bump
