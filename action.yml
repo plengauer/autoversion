@@ -15,6 +15,10 @@ inputs:
     description: 'Exclude all changes from this path'
     required: false
     default: './.github/'
+  working_directory:
+    description: 'Working directory'
+    required: false
+    default: '.'
 runs:
   using: "composite"
   steps:
@@ -34,6 +38,7 @@ runs:
         token: ${{ inputs.github_token }}
         ref: main
         fetch-depth: 0
+        path: ${{ inputs.working_directory }}
     - name: "Search and Bump Versions"
       id: bump
       env:
@@ -41,6 +46,8 @@ runs:
         PATH_EXCLUDE: ${{ inputs.path_exclude }}
       shell: bash
       run: |
+        cd '${{ inputs.working_directory }}'
+
         list_version_files() {
           find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$'
         }
@@ -184,11 +191,12 @@ runs:
         echo "commit_messages=$(cat "$commit_messages" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
     - name: Log Changes
       shell: bash
-      run: git status && git diff
+      run: cd '${{ inputs.working_directory }}' && git status && git diff
     - name: "Resolve Reviewers"
       id: reviewers
       shell: bash
       run: |
+        cd '${{ inputs.working_directory }}'
         if ! [ -f .github/renovate.json ]; then exit 0; fi
         echo "reviewers=$(cat .github/renovate.json | jq '.reviewers // empty' | jq -s | jq -r '.[] | join(",")')" >> "$GITHUB_OUTPUT"
     - name: "Open Pull Request"
@@ -204,6 +212,7 @@ runs:
           (this PR is automatically generated)
         reviewers: ${{ steps.reviewers.outputs.reviewers }}
         delete-branch: true
+        path: ${{ inputs.working_directory }}
     - name: "Delay" # to let the api and PR state catch up ...
       if: steps.open-pr.outputs.pull-request-number != null
       shell: bash
