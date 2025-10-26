@@ -15,6 +15,9 @@ inputs:
     description: 'Exclude all changes from this path'
     required: false
     default: './.github/'
+  increment_threshold:
+    description: 'Do not bump versions under this level'
+    default: 'patch'
   working_directory:
     description: 'Working directory'
     required: false
@@ -184,6 +187,9 @@ runs:
             echo "$commit_id"
           done | tee "$commit_messages" | while read -r commit_id; do git log -1 --format=%B "$commit_id" | tr '\n' ' '; echo; done | grep -vE '^$' | tee /dev/stderr | commits2bumps | sort -u -r | while read -r change_type; do
             if [ "$change_type" = none ]; then continue; fi
+            if [ "$change_type" = patch ] && ( [ ${{ inputs.increment_threshold }} = minor ] || [ ${{ inputs.increment_threshold }} = major ]; then continue; fi
+            if [ "$change_type" = minor ] && ( [ ${{ inputs.increment_threshold }} = major ]; then continue; fi
+            if [ "$change_type" = major ] && false; then continue; fi
             echo "bumping $change_type version in $version_file" >&2
             version_string="$(read_version "$version_file" || true)"
             if [ -z "$version_string" ]; then break; fi
