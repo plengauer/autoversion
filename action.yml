@@ -18,6 +18,9 @@ inputs:
   increment_threshold:
     description: 'Do not bump versions under this level'
     default: 'patch'
+  depth:
+    description: 'How many commits to consider (0 means all, i.e., all commits since the last change to the version file)'
+    default: 0
   working_directory:
     description: 'Working directory'
     required: false
@@ -185,7 +188,7 @@ runs:
             fi
             echo "including $commit_id" >&2
             echo "$commit_id"
-          done | tee "$commit_messages" | while read -r commit_id; do git log -1 --format=%B "$commit_id" | tr '\n' ' '; echo; done | grep -vE '^$' | tee /dev/stderr | commits2bumps | sort -u -r | while read -r change_type; do
+          done | ( [ "${{ inputs.depth }}" = 0 ] && cat || head -n "${{ inputs.depth }} ) | tee "$commit_messages" | while read -r commit_id; do git log -1 --format=%B "$commit_id" | tr '\n' ' '; echo; done | grep -vE '^$' | tee /dev/stderr | commits2bumps | sort -u -r | while read -r change_type; do
             if [ "$change_type" = none ]; then continue; fi
             if [ "$change_type" = patch ] && ( [ ${{ inputs.increment_threshold }} = minor ] || [ ${{ inputs.increment_threshold }} = major ] ); then continue; fi
             if [ "$change_type" = minor ] && ( [ ${{ inputs.increment_threshold }} = major ] ); then continue; fi
