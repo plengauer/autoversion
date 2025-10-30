@@ -18,6 +18,8 @@ inputs:
   increment_threshold:
     description: 'Do not bump versions under this level'
     default: 'patch'
+  ref:
+    default: main
   depth:
     description: 'How many commits to consider (0 means all, i.e., all commits since the last change to the version file)'
     default: 0
@@ -46,7 +48,7 @@ runs:
       uses: actions/checkout@v5.0.0
       with:
         token: ${{ inputs.github_token }}
-        ref: main
+        ref: ${{ inputs.ref }}
         fetch-depth: 0
         path: ${{ inputs.working_directory }}
     - name: "Search and Bump Versions"
