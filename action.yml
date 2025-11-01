@@ -119,12 +119,24 @@ runs:
           echo "$major.$minor.$patch"
         }
 
-        commits2bumps() {
+        commit2bump() {
+          commit_id="$1"
           if [ -n "${{ inputs.openai_token }}" ]; then
-            xargs -r -0 -d '\n' -n 1 ai
+            local system_prompt="
+        You take input representing a single commit (message + diff) and analyze whether the maximum change is either major, minor or patch.
+        Major changes are for breaking changes, minor for new features, enhancements and optimizations, dependency updates that are either major or minor themselves, and other new functionality that does not break existing functionality, patch is for bug fixes and for dependency updates that are patches themselves only. Refactors do not need a version change.
+        If the commit message or diff hint at more than one type of a change, you respond with the highest one. You only respond with major, minor, patch, or none if nothing at all need changing.
+
+        The name of the repository is $GITHUB_REPOSITORY."
+        if [ -r README.md ]; then
+          local system_prompt="$system_prompt
+          The content of the README.md is:
+          $(cat README.md)
+        "
+            { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"^!; } | jq '{ model: "gpt-5", reasoning_effort: "high", messages: [ { role: "developer", content: '"$system_prompt"' }, { role: "user", content: $prompt } ] }' | xargs -I {} curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/chat/completions -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -X POST -d '{}'
           else
-            while read -r commit_message; do
-              case "$(printf '%s' "$commit_message" | tr '[:upper:]' '[:lower:]')" in
+            git log -1 --format=%B "$commit_id" | tr '[:upper:]' '[:lower:]' | while read -r line; do
+              case "$line" in
                 '[bugfix]'*) echo patch;;
                 '[bug]'*) echo patch;;
                 '[minor]'*) echo minor;;
@@ -142,21 +154,11 @@ runs:
             done
           fi
         }
+        export -f commit2bump
 
         set +e
         set +o pipefail
-        export AI_SYSTEM_PROMPT="
-        You take input that are commit messages and analyze whether the maximum change is either major, minor or patch.
-        Major changes are for breaking changes, minor for new features, enhancements and optimizations, dependency updates that are either major or minor themselves, and other new functionality that does not break existing functionality, patch is for bug fixes and for dependency updates that are patches themselves only. Refactors do not need a version change.
-        If the commit messages hint at more than one type of a change, you respond with the highest one. You only respond with major, minor, patch, or none if nothing at all need changing.
 
-        The name of the repository is $GITHUB_REPOSITORY."
-        if [ -r README.md ]; then
-          export AI_SYSTEM_PROMPT="$AI_SYSTEM_PROMPT
-          The content of the README.md is:
-          $(cat README.md)
-        "
-        fi
         commit_messages="$(mktemp)"
         list_version_files | while read -r version_file; do
           echo "processing $version_file ..." >&2
@@ -190,7 +192,7 @@ runs:
             fi
             echo "including $commit_id" >&2
             echo "$commit_id"
-          done | ( [ "${{ inputs.depth }}" = 0 ] && cat || head -n "${{ inputs.depth }}" ) | tee "$commit_messages" | while read -r commit_id; do git log -1 --format=%B "$commit_id" | tr '\n' ' '; echo; done | grep -vE '^$' | tee /dev/stderr | commits2bumps | sort -u -r | while read -r change_type; do
+          done | ( [ "${{ inputs.depth }}" = 0 ] && cat || head -n "${{ inputs.depth }}" ) | tee "$commit_messages" | xargs parallel -j 64 commit2bump ::: | grep -vE '^$' | tee /dev/stderr | sort -u -r | while read -r change_type; do
             if [ "$change_type" = none ]; then continue; fi
             if [ "$change_type" = patch ] && ( [ ${{ inputs.increment_threshold }} = minor ] || [ ${{ inputs.increment_threshold }} = major ] ); then continue; fi
             if [ "$change_type" = minor ] && ( [ ${{ inputs.increment_threshold }} = major ] ); then continue; fi
