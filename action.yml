@@ -34,16 +34,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: "Install Dependencies"
-      env:
-        OPENAI_TOKEN: ${{ inputs.openai_token }}
-      shell: bash
-      run: |
-        [ -z "$OPENAI_TOKEN" ] && exit 0 || true
-        sudo apt-get update
-        sudo apt-get install -y debconf-utils wget jq
-        echo openai openai/OPENAI_API_TOKEN string "$OPENAI_TOKEN" | sudo debconf-set-selections
-        wget -O - https://raw.githubusercontent.com/plengauer/openai/main/INSTALL.sh | sh
     - name: "Checkout"
       uses: actions/checkout@v5.0.0
       with:
