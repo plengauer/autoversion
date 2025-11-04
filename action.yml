@@ -124,7 +124,10 @@ runs:
         $(cat README.md)
         "
             fi
-            { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"'^!'; } | jq -Rs '{ "model": "gpt-5", "reasoning_effort": "high", "messages": [ { "role": "developer", "content": "'"$system_prompt"'" }, { "role": "user", "content": . } ] }' | xargs -0 -I '{}' curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/chat/completions -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -X POST -d '{}'
+            { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"'^!'; } \
+            | jq -Rs '{ "model": "gpt-5", "reasoning_effort": "high", "messages": [ { "role": "developer", "content": "'"$system_prompt"'" }, { "role": "user", "content": . } ] }' \
+            | xargs -0 -I '{}' curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/chat/completions -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -X POST -d '{}' \
+            | jq '.choices[0].message.content' -r
           else
             git log -1 --format=%B "$commit_id" | tr '[:upper:]' '[:lower:]' | while read -r line; do
               case "$line" in
