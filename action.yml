@@ -128,11 +128,12 @@ runs:
         If the commit message or diff hint at more than one type of a change, you respond with the highest one. You only respond with major, minor, patch, or none if nothing at all need changing.
 
         The name of the repository is $GITHUB_REPOSITORY."
-        if [ -r README.md ]; then
-          local system_prompt="$system_prompt
-          The content of the README.md is:
-          $(cat README.md)
+            if [ -r README.md ]; then
+              local system_prompt="$system_prompt
+        The content of the README.md is:
+        $(cat README.md)
         "
+            fi
             { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"^!; } | jq '{ model: "gpt-5", reasoning_effort: "high", messages: [ { role: "developer", content: '"$system_prompt"' }, { role: "user", content: $prompt } ] }' | xargs -I {} curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/chat/completions -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -X POST -d '{}'
           else
             git log -1 --format=%B "$commit_id" | tr '[:upper:]' '[:lower:]' | while read -r line; do
