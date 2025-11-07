@@ -184,9 +184,12 @@ runs:
               IFS=' '
               if [ "$skip" = 1 ]; then continue; fi
             fi
+            count="${count:-0}"
+            if [ "${{ inputs.depth }}" -ne 0 ] && [ "$count" -ge "${{ inputs.depth }}" ]; then echo "stopping due to depth" >&2; break; fi
+            count=$((count + 1))
             echo "including $commit_id" >&2
             echo "$commit_id"
-          done | ( [ "${{ inputs.depth }}" = 0 ] && cat || head -n "${{ inputs.depth }}" ) | tee "$commit_messages" | parallel -j 64 commit2bump | grep -vE '^$' | tee /dev/stderr | sort -u -r | while read -r change_type; do
+          done | tee "$commit_messages" | parallel -j 64 commit2bump | grep -vE '^$' | tee /dev/stderr | sort -u -r | while read -r change_type; do
             if [ "$change_type" = none ]; then continue; fi
             if [ "$change_type" = patch ] && ( [ ${{ inputs.increment_threshold }} = minor ] || [ ${{ inputs.increment_threshold }} = major ] ); then continue; fi
             if [ "$change_type" = minor ] && ( [ ${{ inputs.increment_threshold }} = major ] ); then continue; fi
