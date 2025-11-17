@@ -123,6 +123,7 @@ runs:
               local system_prompt="$system_prompt
         The following is a description of the repository contents:
         $(cat .github/copilot-instructions.md)
+        "
             elif [ -r README.md ]; then
               local system_prompt="$system_prompt
         The content of the README.md is:
