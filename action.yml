@@ -169,7 +169,7 @@ runs:
             */package.json) if jq '.version' "$version_file" | grep -q null; then continue; fi;;
             *) true;;
           esac
-          git log --oneline | cut -d ' ' -f 1 | while read -r commit_id; do
+          git log --oneline ${{ inputs.ref }} | cut -d ' ' -f 1 | while read -r commit_id; do
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             if [ -n "$PATH_INCLUDE" ]; then
