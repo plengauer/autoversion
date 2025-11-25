@@ -19,7 +19,7 @@ jobs:
           OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
         with:
           secrets_to_redact: '["${{ github.token }}","${{ secrets.GITHUB_TOKEN }}"]'
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
         id: version
       - uses: actions/create-release@v1
