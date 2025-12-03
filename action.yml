@@ -170,6 +170,9 @@ runs:
             *) true;;
           esac
           git log --oneline ${{ inputs.ref }} | cut -d ' ' -f 1 | while read -r commit_id; do
+            count="${count:-0}"
+            if [ "${{ inputs.depth }}" -ne 0 ] && [ "$count" -ge "${{ inputs.depth }}" ]; then echo "stopping due to depth" >&2; break; fi
+            count=$((count + 1))
             if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
             if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
             if [ -n "$PATH_INCLUDE" ]; then
@@ -190,9 +193,6 @@ runs:
               IFS=' '
               if [ "$skip" = 1 ]; then continue; fi
             fi
-            count="${count:-0}"
-            if [ "${{ inputs.depth }}" -ne 0 ] && [ "$count" -ge "${{ inputs.depth }}" ]; then echo "stopping due to depth" >&2; break; fi
-            count=$((count + 1))
             echo "including $commit_id" >&2
             echo "$commit_id"
           done | tee "$commit_messages" | parallel -j 64 commit2bump | grep -vE '^$' | tee /dev/stderr | sort -u -r | while read -r change_type; do
