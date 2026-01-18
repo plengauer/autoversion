@@ -1,7 +1,9 @@
 name: Autorerun
 
 on:
-  workflow_dispatch:
+  workflow_run:
+    workflows: ['Release']
+    types: completed
   schedule:
     - cron: '0 0 * * *'
 
