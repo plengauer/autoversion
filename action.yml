@@ -132,7 +132,7 @@ runs:
         "
             fi
             { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"'^!'; } \
-              | jq -Rs --arg system_prompt "$system_prompt" '{ instructions: $system_prompt, input: ., service_tier: "flex" model: "gpt-5.2", reasoning: { effort: "xhigh" }, tools: [ { type: "web_search", search_context_size: "high" } ], text: { format: { type: "json_schema", name: "type", strict: true, schema: { "$schema": "https://json-schema.org/draft/2020-12/schema", type: "object", required: [ "change_type" ], additionalProperties: false, properties: { change_type: { type: "string", enum: [ "major", "minor", "patch", "none" ] } } } } } }' \
+              | jq -Rs --arg system_prompt "$system_prompt" '{ instructions: $system_prompt, input: ., service_tier: "flex", model: "gpt-5.2", reasoning: { effort: "xhigh" }, tools: [ { type: "web_search", search_context_size: "high" } ], text: { format: { type: "json_schema", name: "type", strict: true, schema: { "$schema": "https://json-schema.org/draft/2020-12/schema", type: "object", required: [ "change_type" ], additionalProperties: false, properties: { change_type: { type: "string", enum: [ "major", "minor", "patch", "none" ] } } } } } }' \
               | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/responses -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -d @- \
               | jq '.output[] | select(.type == "message") | .content[] | select(.type == "output_text") | .text' -r | jq .change_type -r
           else
