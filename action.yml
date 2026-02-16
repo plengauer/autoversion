@@ -111,8 +111,7 @@ runs:
 
         commit2bump() {
           commit_id="$1"
-          if [ -n "${{ inputs.openai_token }}" ]; then
-            local system_prompt="
+          local system_prompt="
         You take input representing a single commit (message + diff) and analyze whether the maximum change is either major, minor or patch.
         Major changes are for breaking changes, minor for new features, enhancements and optimizations, dependency updates that are either major or minor themselves, and other new functionality that does not break existing functionality, patch is for bug fixes and for dependency updates that are patches themselves only. Refactors do not need a version change.
         Dependency updates that are major, should only result in a minor version change because the breaking change is in the dependency, not in the using component.
@@ -120,23 +119,28 @@ runs:
         If the commit message or diff hint at more than one type of a change, you respond with the highest one. You only respond with major, minor, patch, or none if neither applies.
 
         The name of the repository is $GITHUB_REPOSITORY."
-            if [ -r .github/copilot-instructions.md ]; then
-              local system_prompt="$system_prompt
+          if [ -r .github/copilot-instructions.md ]; then
+            local system_prompt="$system_prompt
         The following is a description of the repository contents:
         $(cat .github/copilot-instructions.md)
         "
-            elif [ -r README.md ]; then
-              local system_prompt="$system_prompt
+          elif [ -r README.md ]; then
+            local system_prompt="$system_prompt
         The content of the README.md is:
         $(cat README.md)
         "
-            fi
-            { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"'^!'; } \
-              | jq -Rs --arg system_prompt "$system_prompt" '{ instructions: $system_prompt, input: ., service_tier: "flex", model: "gpt-5.2", reasoning: { effort: "xhigh" }, tools: [ { type: "web_search", search_context_size: "high" } ], text: { format: { type: "json_schema", name: "type", strict: true, schema: { "$schema": "https://json-schema.org/draft/2020-12/schema", type: "object", required: [ "change_type" ], additionalProperties: false, properties: { change_type: { type: "string", enum: [ "major", "minor", "patch", "none" ] } } } } } }' \
-              | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/responses -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -d @- \
-              | jq '.output[] | select(.type == "message") | .content[] | select(.type == "output_text") | .text' -r | jq .change_type -r
-          else
-            git log -1 --format=%B "$commit_id" | tr '[:upper:]' '[:lower:]' | while read -r line; do
+          fi
+
+          { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"'^!'; } \
+            | jq -Rs --arg system_prompt "$system_prompt" '{ instructions: $system_prompt, input: ., service_tier: "flex", model: "gpt-5.2", reasoning: { effort: "xhigh" }, tools: [ { type: "web_search", search_context_size: "high" } ], text: { format: { type: "json_schema", name: "type", strict: true, schema: { "$schema": "https://json-schema.org/draft/2020-12/schema", type: "object", required: [ "change_type" ], additionalProperties: false, properties: { change_type: { type: "string", enum: [ "major", "minor", "patch", "none" ] } } } } } }' \
+            | if [ -n "${{ inputs.openai_token }}" ] ; then
+              curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/responses -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -d @-
+            else
+              jq '{ messages: [ { role: "developer", content: .instructions, }, { role: "user", content: .input } ], service_tier: .service_tier, model: "openai/" + .model, reasoning_effort: .reasoning.effort, response_format: .text.format }' \
+                | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://models.github.ai/inference/chat/completions -H "Authorization: Bearer ${{ inputs.github_token }} -H "Content-Type: application/json" -d @- \
+                | jq '{ output: [ { type: "message", content: [ { type: "output_text", text: .choices[0].message.content } ] } ] }'
+            fi | jq '.output[] | select(.type == "message") | .content[] | select(.type == "output_text") | .text' -r | jq .change_type -r \
+            || git log -1 --format=%B "$commit_id" | tr '[:upper:]' '[:lower:]' | while read -r line; do
               case "$line" in
                 '[bugfix]'*) echo patch;;
                 '[bug]'*) echo patch;;
@@ -153,7 +157,6 @@ runs:
                 *) echo minor;;
               esac
             done
-          fi
         }
         export -f commit2bump
 
