@@ -216,13 +216,6 @@ runs:
     - name: Log Changes
       shell: bash
       run: cd '${{ inputs.working_directory }}' && git status && git diff
-    - name: "Resolve Reviewers"
-      id: reviewers
-      shell: bash
-      run: |
-        cd '${{ inputs.working_directory }}'
-        if ! [ -f .github/renovate.json ]; then exit 0; fi
-        echo "reviewers=$(cat .github/renovate.json | jq '.reviewers // empty' | jq -s | jq -r '.[] | join(",")')" >> "$GITHUB_OUTPUT"
     - name: "Open Pull Request"
       if: ${{ inputs.dry_run != 'true' }}
       id: open-pr
@@ -230,12 +223,11 @@ runs:
       with:
         token: ${{ inputs.github_token }}
         commit-message: "Bump Version"
-        branch: "versionbump"
+        branch: "versionbump-${{ inputs.ref }}"
         title: "Automatic Version Bump"
         body: |
           This PR bumps version(s) to trigger a release. It is based on the following commits: ${{ steps.bump.outputs.commit_messages }}
           (this PR is automatically generated)
-        reviewers: ${{ steps.reviewers.outputs.reviewers }}
         delete-branch: true
         path: ${{ inputs.working_directory }}
     - name: "Delay" # to let the api and PR state catch up ...
