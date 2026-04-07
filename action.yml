@@ -223,7 +223,7 @@ runs:
       with:
         token: ${{ inputs.github_token }}
         commit-message: "Bump Version"
-        branch: "versionbump-${{ inputs.ref }}"
+        branch: "versionbump/${{ inputs.ref }}"
         title: "Automatic Version Bump"
         body: |
           This PR bumps version(s) to trigger a release. It is based on the following commits: ${{ steps.bump.outputs.commit_messages }}
