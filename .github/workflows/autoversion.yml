@@ -15,7 +15,7 @@ jobs:
           OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
         with:
           secrets_to_redact: '["${{ github.token }}","${{ secrets.ACTIONS_GITHUB_TOKEN }}","${{ secrets.OPENAI_TOKEN }}"]'
-      - uses: plengauer/autoversion@1d133ebe57f005bd8d285fe66b88cd6e2d87f554 # main
+      - uses: plengauer/autoversion@57602345332ae39ba52eabea426fde11ebc589db # main
         with:
           github_token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
           openai_token: ${{ secrets.OPENAI_TOKEN }}
