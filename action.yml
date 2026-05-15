@@ -136,7 +136,7 @@ runs:
             | if [ -n "${{ inputs.openai_token }}" ] ; then
               curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/responses -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -d @-
             else
-              jq '{ messages: [ { role: "developer", content: .instructions, }, { role: "user", content: .input } ], model: ( "openai/" + .model ), reasoning_effort: .reasoning.effort, response_format: .text.format }' \
+              jq '{ messages: [ { role: "developer", content: .instructions, }, { role: "user", content: .input } ], model: ( "openai/" + .model ), reasoning_effort: .reasoning.effort, response_format: { type: .text.format.type, json_schema: { name: .text.format.name, strict: .text.format.strict, schema: .text.format.schema } } }' \
                 | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://models.github.ai/inference/chat/completions -H "Authorization: Bearer ${{ inputs.github_token }}" -H "Content-Type: application/json" -d @- \
                 | jq '{ output: [ { type: "message", content: [ { type: "output_text", text: .choices[0].message.content } ] } ] }'
             fi | jq '.output[] | select(.type == "message") | .content[] | select(.type == "output_text") | .text' -r | jq .change_type -r \
