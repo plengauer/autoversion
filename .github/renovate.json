@@ -4,7 +4,6 @@
     "config:recommended",
     "helpers:pinGitHubActionDigests"
   ],
-  "dependencyDashboard": false,
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "automerge": true,
