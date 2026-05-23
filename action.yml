@@ -46,6 +46,7 @@ runs:
       env:
         PATH_INCLUDE: ${{ inputs.path_include }}
         PATH_EXCLUDE: ${{ inputs.path_exclude }}
+        INCREMENTS: ${{ inputs.increments }}
       shell: bash
       run: |
         cd '${{ inputs.working_directory }}'
@@ -200,7 +201,7 @@ runs:
             echo "including $commit_id" >&2
             echo "$commit_id"
           done | tee "$commit_messages" | parallel -j 64 commit2bump | grep -vE '^$' | tee /dev/stderr | sort -u -r | while read -r change_type; do
-            if [ "$change_type" = none ] || ! grep <<< "$change_type" -qF "$(tr <<< '${{ inputs.increments }}' ';' '\n')"; then continue; fi
+            if [ "$change_type" = none ] || ! grep <<< "$change_type" -qF "$(tr <<< "$INCREMENTS" ';' '\n')"; then continue; fi
             echo "bumping $change_type version in $version_file" >&2
             version_string="$(read_version "$version_file" || true)"
             if [ -z "$version_string" ]; then break; fi
