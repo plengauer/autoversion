@@ -19,7 +19,7 @@ inputs:
     description: 'Do not bump versions under this level'
     default: 'patch'
   ref:
-    default: main
+    default: ${{ github.ref_name }}
   depth:
     description: 'How many commits to consider (0 means all, i.e., all commits since the last change to the version file)'
     default: 0
