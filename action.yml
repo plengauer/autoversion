@@ -134,7 +134,7 @@ runs:
 
           { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"'^!'; } \
             | jq -Rs --arg system_prompt "$system_prompt" '{ instructions: $system_prompt, input: ., model: "gpt-5", reasoning: { effort: "high" }, tools: [ { type: "web_search", search_context_size: "high" } ], text: { format: { type: "json_schema", name: "type", strict: true, schema: { "$schema": "https://json-schema.org/draft/2020-12/schema", type: "object", required: [ "change_type" ], additionalProperties: false, properties: { change_type: { type: "string", enum: [ "major", "minor", "patch", "none" ] } } } } } }' \
-            | if [ -n "${{ inputs.openai_token }}" ] ; then
+            | OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="${OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT:-span_and_event}" if [ -n "${{ inputs.openai_token }}" ] ; then
               curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/responses -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -d @-
             else
               jq '{ messages: [ { role: "developer", content: .instructions, }, { role: "user", content: .input } ], model: ( "openai/" + .model ), reasoning_effort: .reasoning.effort, response_format: { type: .text.format.type, json_schema: { name: .text.format.name, strict: .text.format.strict, schema: .text.format.schema } } }' \
