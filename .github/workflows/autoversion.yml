@@ -1,6 +1,7 @@
 name: Autoversion
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 0 1 * *'
   push:
@@ -28,7 +29,7 @@ jobs:
           secrets_to_redact: |-
             ${{ github.token }}
             ${{ secrets.OPENAI_TOKEN }}
-      - uses: plengauer/autoversion@badee98ba4eb3a38f99cf8acab7f5510e7e8736f # v5.0.0
+      - uses: plengauer/autoversion@main
         with:
           github_token: ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
           openai_token: ${{ secrets.OPENAI_TOKEN }}
