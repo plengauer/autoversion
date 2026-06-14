@@ -2,7 +2,7 @@ name: 'autoversion'
 description: 'automatically bump versions'
 inputs:
   github_token:
-    description: 'API Token for Github'
+    description: 'API Token for GitHub'
     required: true
   copilot_token:
     description: 'API Token for GitHub Copilot'
