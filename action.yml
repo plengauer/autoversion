@@ -2,8 +2,11 @@ name: 'autoversion'
 description: 'automatically bump versions'
 inputs:
   github_token:
-    description: 'API Token for Github'
+    description: 'API Token for GitHub'
     required: true
+  copilot_token:
+    description: 'API Token for GitHub Copilot'
+    required: false
   openai_token:
     description: 'API Token for OpenAI'
     required: false
@@ -136,28 +139,29 @@ runs:
             | jq -Rs --arg system_prompt "$system_prompt" '{ instructions: $system_prompt, input: ., model: "gpt-5", reasoning: { effort: "high" }, tools: [ { type: "web_search", search_context_size: "high" } ], text: { format: { type: "json_schema", name: "type", strict: true, schema: { "$schema": "https://json-schema.org/draft/2020-12/schema", type: "object", required: [ "change_type" ], additionalProperties: false, properties: { change_type: { type: "string", enum: [ "major", "minor", "patch", "none" ] } } } } } }' \
             | OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="${OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT:-span_and_event}" if [ -n "${{ inputs.openai_token }}" ] ; then
               curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/responses -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -d @-
-            else
+            elif  [ -n "${{ inputs.copilot_token }}" ] ; then
               jq '{ messages: [ { role: "developer", content: .instructions, }, { role: "user", content: .input } ], model: ( "openai/" + .model ), reasoning_effort: .reasoning.effort, response_format: { type: .text.format.type, json_schema: { name: .text.format.name, strict: .text.format.strict, schema: .text.format.schema } } }' \
-                | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://models.github.ai/inference/chat/completions -H "Authorization: Bearer ${{ inputs.github_token }}" -H "Content-Type: application/json" -d @- \
+                | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://models.github.ai/inference/chat/completions -H "Authorization: Bearer ${{ inputs.copilot_token }}" -H "Content-Type: application/json" -d @- \
                 | jq '{ output: [ { type: "message", content: [ { type: "output_text", text: .choices[0].message.content } ] } ] }'
-            fi | jq '.output[] | select(.type == "message") | .content[] | select(.type == "output_text") | .text' -r | jq .change_type -r \
-            || git log -1 --format=%B "$commit_id" | tr '[:upper:]' '[:lower:]' | while read -r line; do
-              case "$line" in
-                '[bugfix]'*) echo patch;;
-                '[bug]'*) echo patch;;
-                '[minor]'*) echo minor;;
-                '[major]'*) echo major;;
-                '[breaking]'*) echo major;;
-                '[breaking change]'*) echo major;;
-                *bug*) echo patch;;
-                *minor*) echo minor;;
-                *major*) echo major;;
-                *'breaking change'*) echo major;;
-                *dependency*) echo minor;;
-                *update*) echo minor;;
-                *) echo minor;;
-              esac
-            done
+            else
+              head -n 2 | tail -n 1 | tr '[:upper:]' '[:lower:]' | while read -r line; do
+                case "$line" in
+                  '[bugfix]'*) echo patch;;
+                  '[bug]'*) echo patch;;
+                  '[minor]'*) echo minor;;
+                  '[major]'*) echo major;;
+                  '[breaking]'*) echo major;;
+                  '[breaking change]'*) echo major;;
+                  *bug*) echo patch;;
+                  *minor*) echo minor;;
+                  *major*) echo major;;
+                  *'breaking change'*) echo major;;
+                  *dependency*) echo minor;;
+                  *update*) echo minor;;
+                  *) echo minor;;
+                esac
+              done | jq -cR '{ "change_type": . }' | jq -R '{ "output": [ { "type": "message", "content": [ { "type": "output_text", "text": . } ] } ] }'
+            fi | jq '.output[] | select(.type == "message") | .content[] | select(.type == "output_text") | .text' -r | jq .change_type -r
         }
         export -f commit2bump
 
