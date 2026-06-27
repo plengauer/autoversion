@@ -28,6 +28,7 @@ jobs:
         with:
           secrets_to_redact: |-
             ${{ github.token }}
+            ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
             ${{ secrets.OPENAI_TOKEN }}
       - uses: plengauer/autoversion@dc7b4d84b166f347b3f6fdbc3e6875e8bfc7a1b8 # main
         with:
