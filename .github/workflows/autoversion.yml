@@ -32,6 +32,7 @@ jobs:
             ${{ secrets.OPENAI_TOKEN }}
       - uses: plengauer/autoversion@59ba44c0e5052c01e1f387ba16f34283f649fe24 # main
         with:
-          github_token: ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
+          github_token: ${{ github.token }}
+          copilot_token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
           openai_token: ${{ secrets.OPENAI_TOKEN }}
           increments: ${{ github.ref_name == 'main' && 'major;minor' || 'patch' }}
