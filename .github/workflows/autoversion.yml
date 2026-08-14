@@ -30,7 +30,7 @@ jobs:
             ${{ github.token }}
             ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
             ${{ secrets.OPENAI_TOKEN }}
-      - uses: plengauer/autoversion@80d6fe1a4f2d1b209784def538a1ab8e947ebe40 # main
+      - uses: plengauer/autoversion@9b7f726ce7bc47a85b25aa04c8afb996a76a5d1c # main
         with:
           github_token: ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
           openai_token: ${{ secrets.OPENAI_TOKEN }}
