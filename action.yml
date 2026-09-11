@@ -1,1 +1,241 @@
-# placeholder, replaced by Write below via github tool call content param
+name: 'autoversion'
+description: 'automatically bump versions'
+inputs:
+  github_token:
+    description: 'API Token for Github'
+    required: true
+  openai_token:
+    description: 'API Token for OpenAI'
+    required: false
+  path_include:
+    description: 'Consider only changes from this path'
+    required: false
+    default: './'
+  path_exclude:
+    description: 'Exclude all changes from this path'
+    required: false
+    default: './.github/'
+  increments:
+    description: 'Allowed increments'
+    default: 'patch;minor;major'
+  ref:
+    default: ${{ github.ref_name }}
+  depth:
+    description: 'How many commits to consider (0 means all, i.e., all commits since the last change to the version file)'
+    default: 0
+  working_directory:
+    description: 'Working directory'
+    required: false
+    default: '.'
+  dry_run:
+    description: 'If true, do not push anything'
+    required: false
+    default: false
+runs:
+  using: "composite"
+  steps:
+    - name: "Checkout"
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        token: ${{ inputs.github_token }}
+        ref: ${{ inputs.ref }}
+        fetch-depth: 0
+        path: ${{ inputs.working_directory }}
+    - name: "Search and Bump Versions"
+      id: bump
+      env:
+        PATH_INCLUDE: ${{ inputs.path_include }}
+        PATH_EXCLUDE: ${{ inputs.path_exclude }}
+        INCREMENTS: ${{ inputs.increments }}
+      shell: bash
+      run: |
+        cd '${{ inputs.working_directory }}'
+
+        list_version_files() {
+          find . | grep -E '/VERSION$|/DEBIAN/control$|/package.json$|.toml$|.gemspec$'
+        }
+
+        is_version_touched() {
+          local version_file="$1"
+          local commit_id="$2"
+          git diff "$commit_id"^ "$commit_id" -- "${version_file#./}" | { grep -E '^\+' || true; } | case "$version_file" in
+            */VERSION) echo dirty;;
+            */DEBIAN/control) grep -q 'Version: ' && echo dirty;;
+            */package.json) grep -q '"version":' && echo dirty;;
+            *.gemspec) grep -q '.version' && echo dirty;;
+            *.toml) grep -q 'version' && echo dirty;;
+            *) echo "Here be dragons! (version file $version_file)" >&2;;
+          esac | grep -q dirty
+        }
+
+        read_version() {
+          local version_file="$1"
+          cat "$version_file" | case "$version_file" in
+            */VERSION) cat;;
+            */DEBIAN/control) grep -E '^Version: ' | cut -d ' ' -f 2-;;
+            */package.json) jq -r .version;;
+            *.gemspec) grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"';;
+            *.toml) grep version | cut -d = -f 2 | awk '{ print $1 }' | tr -d "'"'"';;
+            *) echo "Here be dragons! (version file $version_file)" >&2; cat;;
+          esac
+        }
+
+        write_version() {
+          local version_file="$1"
+          local version_string="$2"
+          local version_string_new="$3"
+          case "$version_file" in
+            */VERSION) echo -n "$version_string_new" > "$version_file";;
+            */DEBIAN/control) sed -i "s/^Version: .*/Version: $version_string_new/" "$version_file";;
+            */package.json) jq --arg version "$version_string_new" '.version = $version' "$version_file" > tmp.$$.json && rm "$version_file" && mv tmp.$$.json "$version_file";;
+            *.gemspec) sed -i "s/$version_string/$version_string_new/g" "$version_file";;
+            *.toml) sed -i "s/$version_string/$version_string_new/g" "$version_file";;
+            *) echo "Here be dragons! (version file $version_file)" >&2; return 1;;
+          esac
+        }
+
+        increment_version() {
+          local version_string="$1"
+          local change_type="$2"
+          major="$(echo "$version_string" | cut -d . -f 1)"
+          minor="$(echo "$version_string" | cut -d . -f 2)"
+          patch="$(echo "$version_string" | cut -d . -f 3)"
+          if [ "$major.$minor.$patch" != "$version_string" ]; then echo "Version format not supported! ($version_string)" >&2; return 1; fi
+          case "$change_type" in
+            major) major="$((major + 1))"; minor=0; patch=0;;
+            minor) minor="$((minor + 1))"; patch=0;;
+            patch) patch="$((patch + 1))";;
+            *) echo "Here be dragons! (change type $change_type)" >&2; return 1;;
+          esac
+          echo "$major.$minor.$patch"
+        }
+
+        commit2bump() {
+          commit_id="$1"
+          local system_prompt="
+        You take input representing a single commit (message + diff) and analyze whether the maximum change is either major, minor or patch.
+        Major changes are for breaking changes, minor for new features, enhancements and optimizations, dependency updates that are either major or minor themselves, and other new functionality that does not break existing functionality, patch is for bug fixes and for dependency updates that are patches themselves only. Temporary reconfiguration of defaults or temporary disablement of features is patch only. Refactors do not need a version change.
+        Dependency updates that are major, should only result in a minor version change because the breaking change is in the dependency, not in the using component.
+        If there is a package file and the according lock file is updated at the same time, ignore the lock file, and only consider the changes in the package file.
+        If the commit message or diff hint at more than one type of a change, you respond with the highest one. You only respond with major, minor, patch, or none if neither applies.
+
+        The name of the repository is $GITHUB_REPOSITORY."
+          if [ -r .github/copilot-instructions.md ]; then
+            local system_prompt="$system_prompt
+        The following is a description of the repository contents:
+        $(cat .github/copilot-instructions.md)
+        "
+          elif [ -r README.md ]; then
+            local system_prompt="$system_prompt
+        The content of the README.md is:
+        $(cat README.md)
+        "
+          fi
+
+          { echo "COMMIT MESSAGE: "; git log -1 --format=%B "$commit_id"; echo; echo "DIFF:"; git diff "$commit_id"'^!'; } \
+            | jq -Rs --arg system_prompt "$system_prompt" '{ instructions: $system_prompt, input: ., model: "gpt-5", reasoning: { effort: "high" }, tools: [ { type: "web_search", search_context_size: "high" } ], text: { format: { type: "json_schema", name: "type", strict: true, schema: { "$schema": "https://json-schema.org/draft/2020-12/schema", type: "object", required: [ "change_type" ], additionalProperties: false, properties: { change_type: { type: "string", enum: [ "major", "minor", "patch", "none" ] } } } } } }' \
+            | OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="${OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT:-span_and_event}" if [ -n "${{ inputs.openai_token }}" ]; then
+              curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/responses -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -d @-
+            else
+              copilot_token="$(curl --no-progress-meter --fail --retry 4 --max-time 60 https://api.github.com/copilot_internal/v2/token -H "Authorization: token ${{ inputs.github_token }}" -H "User-Agent: GithubCopilot/1.155.0" -H "Editor-Version: vscode/1.99.0" -H "Editor-Plugin-Version: copilot-chat/0.26.7" | jq -r .token)"
+              jq '{ messages: [ { role: "developer", content: .instructions, }, { role: "user", content: .input } ], model: .model, reasoning_effort: .reasoning.effort, response_format: { type: .text.format.type, json_schema: { name: .text.format.name, strict: .text.format.strict, schema: .text.format.schema } } }' \
+                | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.githubcopilot.com/chat/completions -H "Authorization: Bearer $copilot_token" -H "Content-Type: application/json" -H "Copilot-Integration-Id: vscode-chat" -H "Editor-Version: vscode/1.99.0" -H "Editor-Plugin-Version: copilot-chat/0.26.7" -H "User-Agent: GitHubCopilotChat/0.26.7" -H "OpenAI-Intent: conversation-panel" -d @- \
+                | jq '{ output: [ { type: "message", content: [ { type: "output_text", text: .choices[0].message.content } ] } ] }'
+            fi | jq '.output[] | select(.type == "message") | .content[] | select(.type == "output_text") | .text' -r | jq .change_type -r \
+            || git log -1 --format=%B "$commit_id" | tr '[:upper:]' '[:lower:]' | while read -r line; do
+              case "$line" in
+                '[bugfix]'*) echo patch;;
+                '[bug]'*) echo patch;;
+                '[minor]'*) echo minor;;
+                '[major]'*) echo major;;
+                '[breaking]'*) echo major;;
+                '[breaking change]'*) echo major;;
+                *bug*) echo patch;;
+                *minor*) echo minor;;
+                *major*) echo major;;
+                *'breaking change'*) echo major;;
+                *dependency*) echo minor;;
+                *update*) echo minor;;
+                *) echo minor;;
+              esac
+            done
+        }
+        export -f commit2bump
+
+        set +e
+        set +o pipefail
+
+        commit_messages="$(mktemp)"
+        list_version_files | while read -r version_file; do
+          echo "processing $version_file ..." >&2
+          if [ -z "$(increment_version "$(read_version "$version_file")" patch)" ]; then continue; fi
+          directory="$(echo "$version_file" | rev | cut -d '/' -f 2- | rev)"/
+          case "$version_file" in
+            */DEBIAN/control) directory="$(echo "$directory" | rev | cut -d '/' -f 3- | rev)"/;;
+            */package.json) if jq '.version' "$version_file" | grep -q null; then continue; fi;;
+            *) true;;
+          esac
+          git log --oneline ${{ inputs.ref }} | cut -d ' ' -f 1 | while read -r commit_id; do
+            count="${count:-0}"
+            if [ "${{ inputs.depth }}" -ne 0 ] && [ "$count" -ge "${{ inputs.depth }}" ]; then echo "stopping due to depth" >&2; break; fi
+            count=$((count + 1))
+            if ! git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${directory#./}"; then continue; fi
+            if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qF "${version_file#./}" && is_version_touched "$version_file" "$commit_id"; then echo "stopping at $commit_id" >&2; break; fi
+            if [ -n "$PATH_INCLUDE" ]; then
+              include=0
+              IFS=:
+              for path_include in $PATH_INCLUDE; do
+                if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${path_include#./}"; then include=1; fi
+              done
+              IFS=' '
+              if [ "$include" = 0 ]; then continue; fi
+            fi
+            if [ -n "$PATH_EXCLUDE" ]; then
+              skip=0
+              IFS=:
+              for path_exclude in $PATH_EXCLUDE; do
+                if git diff-tree --no-commit-id --name-only -r "$commit_id" | grep -qE '^'"${path_exclude#./}"; then skip=1; fi
+              done
+              IFS=' '
+              if [ "$skip" = 1 ]; then continue; fi
+            fi
+            echo "including $commit_id" >&2
+            echo "$commit_id"
+          done | tee "$commit_messages" | parallel -j 64 commit2bump | grep -vE '^$' | tee /dev/stderr | sort -u -r | while read -r change_type; do
+            if [ "$change_type" = none ] || ! grep <<< "$change_type" -qF "$(tr <<< "$INCREMENTS" ';' '\n')"; then continue; fi
+            echo "bumping $change_type version in $version_file" >&2
+            version_string="$(read_version "$version_file" || true)"
+            if [ -z "$version_string" ]; then break; fi
+            version_string_new="$(increment_version "$version_string" "$change_type" || true)"
+            if [ -z "$version_string_new" ]; then break; fi
+            write_version "$version_file" "$version_string" "$version_string_new" || true
+          done
+        done
+        echo "commit_messages=$(cat "$commit_messages" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+    - name: Log Changes
+      shell: bash
+      run: cd '${{ inputs.working_directory }}' && git status && git diff
+    - name: "Open Pull Request"
+      if: ${{ inputs.dry_run != 'true' }}
+      id: open-pr
+      uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      with:
+        token: ${{ inputs.github_token }}
+        commit-message: "Bump Version"
+        branch: "versionbump/${{ inputs.ref }}"
+        title: "Automatic Version Bump"
+        body: |
+          This PR bumps version(s) to trigger a release. It is based on the following commits: ${{ steps.bump.outputs.commit_messages }}
+          (this PR is automatically generated)
+        delete-branch: true
+        path: ${{ inputs.working_directory }}
+    - name: "Delay" # to let the api and PR state catch up ...
+      if: steps.open-pr.outputs.pull-request-number != null
+      shell: bash
+      run: sleep 60
+    - name: "Enable auto-merge"
+      if: steps.open-pr.outputs.pull-request-number != null
+      shell: bash
+      run: gh pr merge --squash --auto ${{ steps.open-pr.outputs.pull-request-number }}
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
