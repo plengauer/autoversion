@@ -67,7 +67,7 @@ runs:
             *) echo "Here be dragons! (version file $version_file)" >&2;;
           esac | grep -q dirty
         }
-        
+
         read_version() {
           local version_file="$1"
           cat "$version_file" | case "$version_file" in
@@ -79,7 +79,7 @@ runs:
             *) echo "Here be dragons! (version file $version_file)" >&2; cat;;
           esac
         }
-        
+
         write_version() {
           local version_file="$1"
           local version_string="$2"
@@ -137,8 +137,9 @@ runs:
             | OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="${OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT:-span_and_event}" if [ -n "${{ inputs.openai_token }}" ]; then
               curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.openai.com/v1/responses -H "Authorization: Bearer ${{ inputs.openai_token }}" -H "Content-Type: application/json" -d @-
             else
-              jq '{ messages: [ { role: "developer", content: .instructions, }, { role: "user", content: .input } ], model: ( "openai/" + .model ), reasoning_effort: .reasoning.effort, response_format: { type: .text.format.type, json_schema: { name: .text.format.name, strict: .text.format.strict, schema: .text.format.schema } } }' \
-                | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://models.github.ai/inference/chat/completions -H "Authorization: Bearer ${{ inputs.github_token }}" -H "Content-Type: application/json" -d @- \
+              copilot_token="$(curl --no-progress-meter --fail --retry 4 --max-time 60 https://api.github.com/copilot_internal/v2/token -H "Authorization: token ${{ inputs.github_token }}" -H "User-Agent: GithubCopilot/1.155.0" -H "Editor-Version: vscode/1.99.0" -H "Editor-Plugin-Version: copilot-chat/0.26.7" | jq -r .token)"
+              jq '{ messages: [ { role: "developer", content: .instructions, }, { role: "user", content: .input } ], model: .model, reasoning_effort: .reasoning.effort, response_format: { type: .text.format.type, json_schema: { name: .text.format.name, strict: .text.format.strict, schema: .text.format.schema } } }' \
+                | curl --no-progress-meter --fail --retry 4 --max-time "$((60 * 60))" https://api.githubcopilot.com/chat/completions -H "Authorization: Bearer $copilot_token" -H "Content-Type: application/json" -H "Copilot-Integration-Id: vscode-chat" -H "Editor-Version: vscode/1.99.0" -H "Editor-Plugin-Version: copilot-chat/0.26.7" -H "User-Agent: GitHubCopilotChat/0.26.7" -H "OpenAI-Intent: conversation-panel" -d @- \
                 | jq '{ output: [ { type: "message", content: [ { type: "output_text", text: .choices[0].message.content } ] } ] }'
             fi | jq '.output[] | select(.type == "message") | .content[] | select(.type == "output_text") | .text' -r | jq .change_type -r \
             || git log -1 --format=%B "$commit_id" | tr '[:upper:]' '[:lower:]' | while read -r line; do
