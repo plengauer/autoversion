@@ -5,7 +5,7 @@ inputs:
     description: 'API Token for Github'
     required: true
   openai_token:
-    description: 'API Token for OpenAI'
+    description: 'API Token for OpenAI (deprectated - use the github-token with copilot permissions)'
     required: false
   path_include:
     description: 'Consider only changes from this path'
