@@ -29,7 +29,7 @@ jobs:
           secrets_to_redact: |-
             ${{ github.token }}
             ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
-      - uses: plengauer/autoversion@52d88dd84f5e9a3bd3f9dbe103b3576810287e72 # main
+      - uses: plengauer/autoversion@7aaa56c82d57bacf391f67f2ceb5e6cfdd83782a # main
         with:
           github_token: ${{ secrets.ACTIONS_GITHUB_TOKEN || github.token }}
           increments: ${{ github.ref_name == 'main' && 'major;minor' || 'patch' }}
