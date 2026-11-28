@@ -28,6 +28,14 @@ jobs:
       actions: read
       checks: read
     steps:
+      - uses: plengauer/opentelemetry-github/actions/instrument/job@af82b8c3e169f06062ac75ffa55f40e221299d36 # v5.67.0
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+        with:
+          secrets_to_redact: |-
+            ${{ github.token }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -35,5 +43,4 @@ jobs:
             workflows: write
             actions: read
             checks: read
-          claude_args:
-            --allowedTools "Bash(*)"
+          claude_args: --allowedTools "Bash(*)"
